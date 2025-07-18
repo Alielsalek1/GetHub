@@ -1,0 +1,58 @@
+### Cart Service API Testing
+
+@baseUrl = http://localhost:5004
+@authToken = YOUR_JWT_TOKEN_HERE
+@customerId = 123e4567-e89b-12d3-a456-426614174000
+
+### Add Item to Cart
+POST {{baseUrl}}/api/cart/items
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "customerId": "{{customerId}}",
+  "productId": "123e4567-e89b-12d3-a456-426614174001",
+  "productName": "Gaming Laptop",
+  "unitPrice": 1299.99,
+  "quantity": 1
+}
+
+### Add Another Item to Cart
+POST {{baseUrl}}/api/cart/items
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "customerId": "{{customerId}}",
+  "productId": "123e4567-e89b-12d3-a456-426614174002",
+  "productName": "Wireless Mouse",
+  "unitPrice": 29.99,
+  "quantity": 2
+}
+
+### Get Cart by Customer
+GET {{baseUrl}}/api/cart/customer/{{customerId}}
+Authorization: Bearer {{authToken}}
+
+### Get Cart Summary
+GET {{baseUrl}}/api/cart/customer/{{customerId}}/summary
+Authorization: Bearer {{authToken}}
+
+### Update Item Quantity
+PUT {{baseUrl}}/api/cart/items/123e4567-e89b-12d3-a456-426614174002/quantity
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "customerId": "{{customerId}}",
+  "productId": "123e4567-e89b-12d3-a456-426614174002",
+  "newQuantity": 3
+}
+
+### Remove Item from Cart
+DELETE {{baseUrl}}/api/cart/items/123e4567-e89b-12d3-a456-426614174002?customerId={{customerId}}
+Authorization: Bearer {{authToken}}
+
+### Clear Cart
+DELETE {{baseUrl}}/api/cart/clear?customerId={{customerId}}
+Authorization: Bearer {{authToken}}

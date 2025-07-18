@@ -1,0 +1,51 @@
+### Order Service API Testing
+
+@baseUrl = http://localhost:5003
+@authToken = YOUR_JWT_TOKEN_HERE
+
+### Create Order
+POST {{baseUrl}}/api/orders
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "customerId": "123e4567-e89b-12d3-a456-426614174000",
+  "items": [
+    {
+      "productId": "123e4567-e89b-12d3-a456-426614174001",
+      "productName": "Gaming Laptop",
+      "quantity": 1,
+      "unitPrice": 1299.99
+    },
+    {
+      "productId": "123e4567-e89b-12d3-a456-426614174002",
+      "productName": "Wireless Mouse",
+      "quantity": 2,
+      "unitPrice": 29.99
+    }
+  ],
+  "shippingAddress": "123 Main St, City, State 12345",
+  "billingAddress": "123 Main St, City, State 12345"
+}
+
+### Get Order by ID
+GET {{baseUrl}}/api/orders/123e4567-e89b-12d3-a456-426614174000
+Authorization: Bearer {{authToken}}
+
+### Get Orders by Customer
+GET {{baseUrl}}/api/orders/customer/123e4567-e89b-12d3-a456-426614174000
+Authorization: Bearer {{authToken}}
+
+### Update Order Status
+PUT {{baseUrl}}/api/orders/123e4567-e89b-12d3-a456-426614174000/status
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "orderId": "123e4567-e89b-12d3-a456-426614174000",
+  "newStatus": "Processing"
+}
+
+### Cancel Order
+DELETE {{baseUrl}}/api/orders/123e4567-e89b-12d3-a456-426614174000
+Authorization: Bearer {{authToken}}
