@@ -1,32 +1,83 @@
 using authService.Dtos;
+using authService.DTOs;
 using authService.Interfaces;
+using FluentResults;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharedKernel;
+using SharedKernel.Annotations;
+using SharedKernel.Enums;
+using SharedKernel.Extensions;
+using Serilog;
 
 namespace authService.controllers;
 
+/// <summary>
+/// Controller responsible for handling authentication operations including user registration and login.
+/// Provides endpoints for user authentication workflows with comprehensive logging.
+/// </summary>
 [ApiController]
-[Route("api/auth")]
+[Route("auth")]
+[Authorize]
 public class AuthController(IAuthService authService) : ControllerBase
 {
+    private readonly Serilog.ILogger _logger = Log.ForContext<AuthController>();
+
+    /// <summary>
+    /// Registers a new user in the system.
+    /// </summary>
+    /// <param name="dto">The registration request containing user details</param>
+    /// <returns>An API result indicating success or failure of the registration</returns>
+    /// <response code="200">User registered successfully</response>
+    /// <response code="400">Invalid input data or registration failed</response>
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest dto)
+    [AuthorizeAuthType(AuthType.Anonymous)]
+    public async Task<IResult> Register([FromBody] RegisterRequest dto)
     {
-        var content = await authService.RegisterAsync(dto);
-        var response = new ApiResponse("Registration successful, Complete your verification", 201, content);
+        _logger.Information("User registration attempt for email: {Email}", dto.email);
         
-        return StatusCode(201, response);
+        var result = await authService.RegisterAsync(dto);
+
+        if (result.IsSuccess)
+            _logger.Information("User registration successful for email: {Email}", dto.email);
+        else
+            _logger.Warning("User registration failed for email: {Email}. Errors: {Errors}", 
+                dto.email, string.Join(", ", result.Errors.Select(e => e.Message)));
+
+        return result.ToApiResult(
+            successMessage: "User registered successfully",
+            successStatusCode: 200
+        );
     }
 
-    // [HttpPost("login")]
-    // public async Task<IActionResult> Login([FromBody] LoginRequest dto)
-    // {
-    //     var token = await authService.LoginAsync(dto);
-    //     var response = new ApiResponse("Login successful", 200, token);
-    //     return StatusCode(200, response);
-    // }
+    /// <summary>
+    /// Authenticates a user with email and password credentials.
+    /// </summary>
+    /// <param name="dto">The login request containing user credentials</param>
+    /// <returns>An API result with authentication token if successful</returns>
+    /// <response code="200">Login successful with authentication token</response>
+    /// <response code="401">Invalid credentials provided</response>
+    /// <response code="400">Invalid input data</response>
+    [HttpPost("login")]
+    public async Task<IResult> Login([FromBody] LoginRequest dto)
+    {
+        _logger.Information("User login attempt for email: {Email}", dto.email);
+        
+        var result = await authService.LoginAsync(dto);
+
+        if (result.IsSuccess)
+            _logger.Information("User login successful for email: {Email}", dto.email);
+        else
+            _logger.Warning("User login failed for email: {Email}. Errors: {Errors}", 
+                dto.email, string.Join(", ", result.Errors.Select(e => e.Message)));
+
+        return result.ToApiResult(
+            successMessage: "Login successful",
+            successStatusCode: 200
+        );
+    }
 
     // [HttpGet("externallogin")]
     // public async Task<IActionResult> ExternalLogin()

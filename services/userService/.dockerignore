@@ -1,5 +1,16 @@
 **/bin/
 **/obj/
 .vs/
+.vscode/
 .git/
+*.git
 Dockerfile
+**/.dockerignore
+**/docker-compose*
+**/*.Development.json
+**/appsettings.local.json
+**/*.user
+**/*.log
+**/TestResults/
+**/.nuget/
+**/packages/

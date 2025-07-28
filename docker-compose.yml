@@ -1,5 +1,39 @@
-version: "3.8"
 services:
+  userdb:
+    platform: linux/arm64
+    image: mongo:7.0-jammy
+    container_name: gethub-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: UserServiceDb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - appnet
+    restart: unless-stopped
+
+  authdb:
+    platform: linux/arm64
+    image: mongo:7.0-jammy
+    container_name: gethub-auth-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: AuthServiceDb
+    ports:
+      - "27018:27018"
+    volumes:
+      - auth_mongodb_data:/data/db
+      - auth_mongodb_config:/data/configdb
+    networks:
+      - appnet
+    restart: unless-stopped
+    command: --port 27018
+
   rabbitmq:
     image: rabbitmq:3-management
     ports:
@@ -8,30 +42,60 @@ services:
     networks:
       - appnet
 
-  keycloak:
-    image: quay.io/keycloak/keycloak:21.1.1
-    command: start-dev
+  seq:
+    image: datalust/seq:latest
     environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=true
     ports:
-      - "8080:8080"
+      - "8081:80"
+      - "5341:5341"
+    volumes:
+      - seq_data:/data
     networks:
       - appnet
 
-  auth-service:
+  api-gateway:
     build:
-      dockerfile: services/authService/dockerFile
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - RabbitMQ__Host=rabbitmq
-      - RabbitMQ__Port=5672
+      dockerfile: services/apiGateway/Dockerfile
     env_file:
       - ./.env
+      - services/apiGateway/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - rabbitmq
+      - auth-service
+      - user-service
+    networks:
+      - appnet
+
+    catalog-service:
+      build:
+        dockerfile: services/catalogService/Dockerfile
+      env_file:
+        - ./.env
+        - services/catalogService/.env
+      ports:
+        - "5083:5083"
+      depends_on:
+        - rabbitmq
+        - auth-service
+        - user-service
+      networks:
+        - appnet
+
+  auth-service:
+    build:
+      dockerfile: services/authService/Dockerfile
+    env_file:
+      - ./.env
+      - services/authService/.env
     ports:
       - "5085:5085"
     depends_on:
       - rabbitmq
+      - authdb
     networks:
       - appnet
 
@@ -42,10 +106,24 @@ services:
       - "5082:5082"
     depends_on:
       - rabbitmq
+      - userdb
     networks:
       - appnet
     env_file:
       - ./.env
+      - services/userService/.env
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  auth_mongodb_data:
+    driver: local
+  auth_mongodb_config:
+    driver: local
+  seq_data:
+    driver: local
 
 networks:
   appnet:

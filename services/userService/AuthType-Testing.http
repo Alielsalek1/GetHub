@@ -1,0 +1,45 @@
+# JWT AuthType System Testing
+
+@userService_HostAddress = http://localhost:5081
+@authService_HostAddress = http://localhost:5085
+
+## Step 1: Get Service Token (for service-to-service calls)
+POST {{authService_HostAddress}}/api/service-auth/token
+Content-Type: application/json
+X-Service-Secret: a7f9c2e8b5d4a1c3f6e9b8d2a5c7f0e3
+
+{
+  "serviceName": "testService"
+}
+
+## Step 2: Test Anonymous Endpoint (should work without token)
+GET {{userService_HostAddress}}/users/health
+
+## Step 3: Test User Registration (Anonymous endpoint)
+POST {{userService_HostAddress}}/users
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "username": "testuser",
+  "password": "SecurePass123!"
+}
+
+## Step 4: Test Service-Only Endpoint (requires service token from Step 1)
+GET {{userService_HostAddress}}/users/internal/all
+Authorization: Bearer YOUR_SERVICE_TOKEN_HERE
+
+## Step 5: Test User-Only Endpoint (requires user token)
+GET {{userService_HostAddress}}/users/me
+Authorization: Bearer YOUR_USER_TOKEN_HERE
+
+## Step 6: Test UserOrService Endpoint (works with both token types)
+GET {{userService_HostAddress}}/users/12345678-1234-1234-1234-123456789012/profile
+Authorization: Bearer YOUR_USER_OR_SERVICE_TOKEN_HERE
+
+## Expected Results:
+# - Health endpoint (Step 2): ✅ 200 OK (Anonymous access)
+# - User registration (Step 3): ✅ 200 OK (Anonymous access)  
+# - Internal/all (Step 4): ✅ 200 OK with service token, ❌ 401/403 without token
+# - Users/me (Step 5): ✅ 200 OK with user token, ❌ 401/403 with service token
+# - User profile (Step 6): ✅ 200 OK with either user or service token

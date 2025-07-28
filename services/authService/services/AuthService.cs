@@ -4,85 +4,126 @@ using Microsoft.AspNetCore.Http;
 using authService.Interfaces;
 using authService.Dtos;
 using authService.models;
-using SharedKernel.Events;
 using MassTransit;
+using FluentResults;
+using SharedKernel;
+using SharedKernel.Services;
+using System.Net.Http.Headers;
+using System.Text.Json;
+using authService.DTOs;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using System.Text;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace authService.Services;
 
 public class AuthService(
     IMapper mapper,
-    IPublishEndpoint publishEndpoint
-) : IAuthService
+    IPublishEndpoint publishEndpoint,
+    IConfiguration configuration,
+    IHttpClientFactory httpClientFactory,
+    ILogger<AuthService> logger,
+    IAuthUserRepository userRepository
+    ) : IAuthService
 {
-    private readonly IMapper _mapper = mapper;
-    private readonly IPublishEndpoint _publishEndpoint = publishEndpoint;
-    public async Task<UserResponse> RegisterAsync(RegisterRequest dto)
+    private readonly HttpClient usersClient = httpClientFactory.CreateClient("users");
+
+    public async Task<Result> RegisterAsync(RegisterRequest dto)
     {
-        // getting the mapped user from the DTO
-        AuthUser newUser = _mapper.Map<AuthUser>(dto);
-        // assign a new Id
-        newUser.Id = Guid.NewGuid();
-        newUser.AuthScheme = AuthScheme.Local;
+        var createReq = new
+        {
+            dto.username,
+            dto.email
+        };
 
-        // // checking if the username already exists, username should be unique
-        // if (await userRepository.GetByUsernameAsync(dto.username) != null)
-        // {
-        //     throw new AlreadyExistsException("username already exists");
-        // }
+        var result = await new ServiceAuthService(configuration).IssueServiceTokenAsync();
+        var token = result.Value;
 
-        // var user = await userRepository.GetByEmailAsync(dto.email);
-        // // checking if the Email already exists
-        // if (user != null)
-        // {
-        //     if (user.IsEmailVerified)
-        //     {
-        //         throw new AlreadyExistsException("Email already in use");
-        //     }
-        // }
+        var req = new HttpRequestMessage(HttpMethod.Post, "users")
+        {
+            Content = JsonContent.Create(createReq)
+        };
 
-        // await userService.AddUserAsync(newUser);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var resp = await usersClient.SendAsync(req);
+        
+        if (!resp.IsSuccessStatusCode)
+        {
+            var error = await resp.Content.ReadFromJsonAsync<ApiResponse>();
 
-        // create refresh token
-        // await tokenService.GenerateRefreshTokenAsync(newUser);
+            if (error == null || error.data == null)
+                return Result.Fail(new CustomError(resp.Content.ToString() ?? "failed", (int)resp.StatusCode));
+                
+            return Result.Fail(new CustomError(error.message, (int)resp.StatusCode));
+        }
 
-        // var userFromDb = await userRepository.GetByUsernameAsync(newUser.Username);
-        // publish UserCreated event
-        await _publishEndpoint.Publish(new UserCreated(
-            newUser.Id,
-            dto.email,
-            dto.username));
+        // Get the ApiResponse envelope from the UserService
+        var apiResponse = await resp.Content.ReadFromJsonAsync<ApiResponse>();
+        if (apiResponse?.data == null)
+        {
+            logger.LogError("No data returned from UserService");
+            return Result.Fail(new CustomError("No user data returned from UserService", 500));
+        }
 
-        var response = _mapper.Map<UserResponse>(newUser);
+        var userDataJson = (JsonElement)apiResponse.data;
+        var userId = userDataJson.GetProperty("id").GetGuid();
 
-        return response;
+        var newUser = new AuthUser
+        {
+            Id = userId,
+            Email = dto.email,
+            IsEmailVerified = false,
+            PasswordHash = PasswordService.Encode(dto.password),
+            RefreshToken = Guid.NewGuid(),
+            RefreshTokenExpiry = DateTime.Now.AddDays(10),
+            IsRefreshTokenRevoked = false,
+            AuthScheme = AuthScheme.Local
+        };
+
+        await userRepository.CreateAsync(newUser);
+
+        return Result.Ok();
     }
 
-    // public async Task<AuthResponse> LoginAsync(LoginRequest dto, AuthScheme authScheme)
-    // {
-    //     var curUser = await userRepository.GetByUsernameAsync(dto.username);
+    public async Task<Result<LoginResponse>> LoginAsync(LoginRequest dto, AuthScheme authScheme)
+    {
+        var curUser = await userRepository.GetByEmailAsync(dto.email);
 
-    //     if (!Helpers.IsValidUser(curUser, dto.password) || curUser.AuthScheme != authScheme)
-    //     {
-    //         throw new InvalidInputException("Invalid Credentials");
-    //     }
+        if (curUser == null ||
+        !PasswordService.Verify(dto.password, curUser.PasswordHash) ||
+        curUser.AuthScheme != authScheme)
+        {
+            return Result.Fail(new InvalidCredentialsError("Invalid Credentials"));
+        }
 
-    //     var refreshToken = await refreshTokenRepository.GetRefreshTokenByUserIdAsync(curUser.Id);
-    //     if (refreshToken == null)
-    //     {
-    //         throw new NotFoundException("Refresh token not found.");
-    //     }
-    //     await tokenService.RenewRefreshTokenAsync(refreshToken);
-    //     Helpers.IsValidRefreshToken(refreshToken);
+        var refreshToken = curUser.RefreshToken;
 
-    //     var accessToken = tokenService.GenerateJwtToken(curUser);
+        // Renew the refresh token
+        curUser.RefreshTokenExpiry = DateTime.Now.AddDays(10);
+        await userRepository.UpdateAsync(curUser);
 
-    //     return new AuthResponse
-    //     {
-    //         UserId = curUser.Id,
-    //         RefreshToken = refreshToken.Token,
-    //         AccessToken = accessToken
-    //     };
-    // }
+        // access token logic
+        var externalSecret = configuration["Jwt:External:Secret"] ?? throw new InvalidOperationException("External JWT secret is not configured.");
+        var externalIssuer = configuration["Jwt:External:Issuer"] ?? throw new InvalidOperationException("External JWT issuer is not configured.");
+        var externalAudience = configuration["Jwt:External:Audience"] ?? throw new InvalidOperationException("External JWT audience is not configured.");
+
+        var claims = new List<Claim>
+        {
+            new("user_id", curUser.Id.ToString()),
+            new("email", curUser.Email)
+        };
+        
+        var accessToken = JwtTokenService.CreateJwtToken(claims, externalSecret, externalIssuer, externalAudience);
+
+        return new LoginResponse
+        {
+            accessToken = accessToken,
+            refreshToken = refreshToken.ToString(),
+            userId = curUser.Id,
+            email = curUser.Email
+        };
+    }
 
     // public async Task RequestPasswordReset(ActionRequest dto)
     // {

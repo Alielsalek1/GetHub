@@ -11,9 +11,18 @@
     <PackageReference Include="MassTransit" Version="8.5.0" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.0" />
     <PackageReference Include="Microsoft.OpenApi" Version="1.6.14" />
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <ProjectReference Include="..\..\shared\SharedKernel\SharedKernel.csproj" />
     <PackageReference Include="MongoDB.Driver" Version="2.23.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.7" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.1.2" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="7.1.2" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="7.1.2" />
   </ItemGroup>
 
 </Project>

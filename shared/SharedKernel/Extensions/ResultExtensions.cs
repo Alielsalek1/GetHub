@@ -10,7 +10,7 @@ public static class ResultExtensions
         this Result<T> result,
         int successStatusCode,
         string? successMessage = null
-        )
+    )
     {
         if (result.IsSuccess)
         {
@@ -21,20 +21,16 @@ public static class ResultExtensions
                 value
             );
 
-            return Results.Json(response, statusCode: response.StatusCode);
+            return Results.Json(response, statusCode: response.statusCode);
         }
 
         var error = result.Errors.FirstOrDefault();
 
         int status;
         if (error != null && error.Metadata.TryGetValue("HttpStatus", out var code))
-        {
             status = Convert.ToInt32(code);
-        }
         else
-        {
-            status = StatusCodes.Status400BadRequest;
-        }
+            status = StatusCodes.Status500InternalServerError;
 
         return Results.Json(new ApiResponse(
             message: error?.Message ?? "An unexpected error occurred",
@@ -57,7 +53,7 @@ public static class ResultExtensions
                 null
             );
 
-            return Results.Json(response, statusCode: response.StatusCode);
+            return Results.Json(response, statusCode: response.statusCode);
         }
 
         var error = result.Errors.FirstOrDefault();

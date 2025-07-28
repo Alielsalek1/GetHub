@@ -1,52 +1,69 @@
-using catalogService.Infrastructure.Persistence;
-using catalogService.Domain.Interfaces;
-using catalogService.Infrastructure.Repositories;
-using catalogService.Application.Services;
-using catalogService.Endpoints;
-using Microsoft.EntityFrameworkCore;
+using SharedKernel.Middleware;
+using Microsoft.AspNetCore.Builder;
 using SharedKernel.Extensions;
+using FluentValidation;
+using Serilog;
 
-var builder = WebApplication.CreateBuilder(args);
+using CatalogService.Presentation;
 
-// Add DbContext for PostgreSQL
-builder.Services.AddDbContext<CatalogDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
+// Configure Serilog from configuration
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
+    .AddEnvironmentVariables()
+    .Build();
 
-// Register repositories
-builder.Services.AddScoped<IProductRepository, ProductRepository>();
-builder.Services.AddScoped<IProductAttributeRepository, ProductAttributeRepository>();
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(configuration)
+    .CreateLogger();
 
-// Register services
-builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddScoped<IProductAttributeService, ProductAttributeService>();
-
-// JWT authentication (Keycloak)
-builder.Services.AddJwtAuthentication(builder.Configuration);
-builder.Services.AddAuthorization(options =>
+try
 {
-    options.AddPolicy("Internal", policy =>
-        policy.RequireAuthenticatedUser()
-              .AddAuthenticationSchemes("Internal"));
-});
+    Log.Information("Starting CatalogService");
 
-// Swagger
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+    var builder = WebApplication.CreateBuilder(args);
+    
+    var startup = new Startup(builder.Configuration);
+    startup.ConfigureSerilog(builder);
 
-var app = builder.Build();
+    builder.Services.AddControllers();
+    JwtAuthenticationExtensions.AddJwtAuthentication(builder.Services, builder.Configuration);
+    builder.Services.AddAuthorization();
 
-// Global exception handler
-app.UseGlobalExceptionHandler();
+    startup.ConfigureServices(builder.Services);
+    startup.ConfigureSwagger(builder.Services);
 
-app.UseAuthentication();
-app.UseAuthorization();
+    builder.Services.UseFluentValidationWithApiResponse();
+    builder.Services.UseJsonValidator();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    var app = builder.Build();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    // input validation
+    app.UseGlobalExceptionHandler();
+
+    app.UseHttpsRedirection();
+    app.UseRouting();
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    // application logic
+    app.MapControllers();
+
+    app.Run();
 }
-
-app.MapCatalogEndpoints();
-
-app.Run();
+catch (Exception ex)
+{
+    Log.Fatal(ex, "CatalogService terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

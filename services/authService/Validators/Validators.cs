@@ -3,8 +3,14 @@ using System.Text.RegularExpressions;
 
 namespace authService.Validators;
 
+/// <summary>
+/// Validator for integer ID values, ensuring they are positive.
+/// </summary>
 public class IdValidator : AbstractValidator<int>
 {
+    /// <summary>
+    /// Initializes a new instance of the IdValidator class with validation rules.
+    /// </summary>
     public IdValidator()
     {
         RuleFor(x => x)
@@ -12,8 +18,15 @@ public class IdValidator : AbstractValidator<int>
     }
 }
 
+/// <summary>
+/// Validator for username strings, ensuring they meet format and length requirements.
+/// Validates that usernames are alphanumeric and have appropriate length.
+/// </summary>
 public class UsernameValidator : AbstractValidator<string>
 {
+    /// <summary>
+    /// Initializes a new instance of the UsernameValidator class with validation rules.
+    /// </summary>
     public UsernameValidator()
     {
         RuleFor(x => x)
@@ -23,8 +36,15 @@ public class UsernameValidator : AbstractValidator<string>
     }
 }
 
+/// <summary>
+/// Validator for password strings, ensuring they meet security requirements.
+/// Validates password complexity including uppercase, lowercase, numbers, and special characters.
+/// </summary>
 public class PasswordValidator : AbstractValidator<string>
 {
+    /// <summary>
+    /// Initializes a new instance of the PasswordValidator class with validation rules.
+    /// </summary>
     public PasswordValidator()
     {
         RuleFor(x => x)
@@ -37,8 +57,15 @@ public class PasswordValidator : AbstractValidator<string>
     }
 }
 
+/// <summary>
+/// Validator for email address strings, ensuring they are properly formatted.
+/// Validates that email addresses meet the standard email format requirements.
+/// </summary>
 public class EmailValidator : AbstractValidator<string>
 {
+    /// <summary>
+    /// Initializes a new instance of the EmailValidator class with validation rules.
+    /// </summary>
     public EmailValidator()
     {
         RuleFor(x => x)
