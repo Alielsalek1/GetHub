@@ -18,6 +18,7 @@ The platform follows a distributed microservices architecture with the following
 - **Backend Framework**: ASP.NET Core 8.0 with Minimal APIs
 - **Authentication**: JWT Bearer tokens
 - **Database**: PostgreSQL 15 with Entity Framework Core, MongoDB
+- **Caching**: Redis
 - **Message Broker**: RabbitMQ with MassTransit
 - **API Gateway**: YARP (Yet Another Reverse Proxy)
 - **Containerization**: Docker & Docker Compose
