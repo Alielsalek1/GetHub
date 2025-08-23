@@ -4,8 +4,19 @@ using SharedKernel;
 
 namespace SharedKernel.Extensions;
 
+/// <summary>
+/// Extension methods for converting FluentResults to API responses
+/// </summary>
 public static class ResultExtensions
 {
+    /// <summary>
+    /// Converts a FluentResults Result&lt;T&gt; to an API-compatible IResult with standardized response format
+    /// </summary>
+    /// <typeparam name="T">The type of data returned on success</typeparam>
+    /// <param name="result">The FluentResults Result to convert</param>
+    /// <param name="successStatusCode">HTTP status code to return on success</param>
+    /// <param name="successMessage">Optional custom success message</param>
+    /// <returns>An IResult containing the standardized API response</returns>
     public static IResult ToApiResult<T>(
         this Result<T> result,
         int successStatusCode,
@@ -39,6 +50,13 @@ public static class ResultExtensions
         ), statusCode: status);
     }
 
+    /// <summary>
+    /// Converts a FluentResults Result to an API-compatible IResult with standardized response format
+    /// </summary>
+    /// <param name="result">The FluentResults Result to convert</param>
+    /// <param name="successStatusCode">HTTP status code to return on success</param>
+    /// <param name="successMessage">Optional custom success message</param>
+    /// <returns>An IResult containing the standardized API response</returns>
     public static IResult ToApiResult(
         this Result result,
         int successStatusCode,

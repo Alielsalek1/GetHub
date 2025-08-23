@@ -60,3 +60,5 @@ nunit-*.xml
 .qodo
 .env
 todo.txt
+.vscode/tasks.json
+.vscode

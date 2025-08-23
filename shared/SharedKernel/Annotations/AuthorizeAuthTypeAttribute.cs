@@ -7,11 +7,19 @@ using SharedKernel.Enums;
 
 namespace SharedKernel.Annotations;
 
+/// <summary>
+/// Authorization attribute that restricts access based on authentication type from JWT claims
+/// </summary>
+/// <param name="authTypes">Array of allowed authentication types for the endpoint</param>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false)]
 public class AuthorizeAuthTypeAttribute(params AuthType[] authTypes) : Attribute, IAuthorizationFilter
 {
     private readonly AuthType[] _requiredAuthTypes = authTypes ?? throw new ArgumentNullException(nameof(authTypes));
 
+    /// <summary>
+    /// Performs authorization logic based on the auth_type claim in the JWT token
+    /// </summary>
+    /// <param name="context">The authorization filter context containing request information</param>
     public void OnAuthorization(AuthorizationFilterContext context)
     {
         if (_requiredAuthTypes.Contains(AuthType.Anonymous))

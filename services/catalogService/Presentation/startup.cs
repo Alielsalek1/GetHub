@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Hosting;
 using Serilog;
 using Microsoft.Extensions.DependencyInjection; // Ensure IServiceCollection is available
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Microsoft.EntityFrameworkCore;
+using CatalogService.Infrastructure.Data;
+using System.Reflection;
 
 namespace CatalogService.Presentation;
 
@@ -27,12 +30,23 @@ public class Startup(IConfiguration configuration)
 
     /// <summary>
     /// Registers application-specific services and their implementations.
-    /// Configures dependency injection for user service and repository layers.
+    /// Configures dependency injection for catalog service and repository layers.
     /// </summary>
     /// <param name="services">The service collection to register application services to</param>
     public void ConfigureServices(IServiceCollection services)
     {
-        
+        // Configure Entity Framework with PostgreSQL
+        services.AddDbContext<CatalogDbContext>(options =>
+        {
+            var connectionString = Configuration.GetConnectionString("DefaultConnection");
+            options.UseNpgsql(connectionString);
+        });
+
+        // Register MediatR services
+        services.AddMediatR(cfg => {
+            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+            cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
+        });
     }
 
     /// <summary>

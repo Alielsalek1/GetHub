@@ -8,13 +8,26 @@ using FluentValidation.AspNetCore;
 
 namespace SharedKernel.Extensions;
 
+/// <summary>
+/// Extension methods for configuring exception handling and validation middleware
+/// </summary>
 public static class ExceptionHandlingMiddlewareExtensions
 {
+    /// <summary>
+    /// Adds global exception handling middleware to the application pipeline
+    /// </summary>
+    /// <param name="app">The application builder to add middleware to</param>
+    /// <returns>The application builder for method chaining</returns>
     public static IApplicationBuilder UseGlobalExceptionHandler(this IApplicationBuilder app)
     {
         return app.UseMiddleware<ExceptionHandlingMiddleware>();
     }
 
+    /// <summary>
+    /// Configures FluentValidation with custom API response format for validation errors
+    /// </summary>
+    /// <param name="services">The service collection to configure validation for</param>
+    /// <returns>The service collection for method chaining</returns>
     public static IServiceCollection UseFluentValidationWithApiResponse(this IServiceCollection services)
     {
         services.AddFluentValidationAutoValidation();
@@ -36,6 +49,11 @@ public static class ExceptionHandlingMiddlewareExtensions
         return services;
     }
     
+    /// <summary>
+    /// Configures JSON validation with custom API response format for invalid JSON requests
+    /// </summary>
+    /// <param name="services">The service collection to configure JSON validation for</param>
+    /// <returns>The service collection for method chaining</returns>
     public static IServiceCollection UseJsonValidator(this IServiceCollection services)
     {
         services.Configure<ApiBehaviorOptions>(options =>

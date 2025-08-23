@@ -45,7 +45,6 @@ try
         app.UseSwaggerUI();
     }
 
-    // input validation
     app.UseGlobalExceptionHandler();
 
     app.UseHttpsRedirection();
