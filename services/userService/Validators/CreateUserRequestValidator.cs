@@ -1,24 +1,27 @@
 using FluentValidation;
-using Microsoft.AspNetCore.Identity.Data;
-using URLshortner.Dtos;
-using URLshortner.Utils;
 using userService.DTOs;
+using Shared.Utils;
 
-namespace URLshortner.Dtos.Validators;
+namespace userService.Validators;
 
 /// <summary>
 /// Validator for CreateUserRequest DTO.
-/// Validates the username and email fields.
+/// Validates the phoneNumber field using shared validators.
 /// </summary>
 /// <remarks>
-/// This validator checks that the username is not empty and meets the required format,
-/// and that the email is not empty and is a valid email address.
+/// This validator uses shared validators from the Utils library to ensure consistency
+/// across the application. PhoneNumber is required, address is optional.
 /// </remarks>
 public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
 {
     public CreateUserRequestValidator()
     {
-        RuleFor(x => x.username).SetValidator(new UsernameValidator());
-        RuleFor(x => x.email).SetValidator(new EmailValidator());
+        RuleFor(x => x.phoneNumber)
+            .NotEmpty().WithMessage("Phone number is required.")
+            .SetValidator(new PhoneNumberValidator());
+        
+        RuleFor(x => x.address)
+            .SetValidator(new AddressValidator())
+            .When(x => !string.IsNullOrEmpty(x.address));
     }
 }

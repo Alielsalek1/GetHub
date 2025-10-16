@@ -1,6 +1,6 @@
 using System.Runtime.ExceptionServices;
-using CatalogService.Application.Commands;
 using CatalogService.Application.DTOs;
+using CatalogService.Application.Features.Commands.CreateCategory;
 using CatalogService.Application.Features.Commands.UpdateCategory;
 using CatalogService.Application.Features.Queries.GetBaseCategories;
 using CatalogService.Application.Queries;
@@ -11,7 +11,7 @@ using SharedKernel.Extensions;
 namespace CatalogService.Presentation.controllers;
 
 [ApiController]
-[Route("category")]
+[Route("api/[controller]")]
 public class CategoryController(IMediator mediator) : ControllerBase
 {
     [HttpGet("{id}")]
@@ -59,13 +59,18 @@ public class CategoryController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IResult> CreateCategoryAsync([FromBody] CreateCategoryCommand command)
+    public async Task<IResult> CreateCategory([FromBody] CreateCategoryRequest request)
     {
+        var command = new CreateCategoryCommand
+        {
+            Name = request.Name,
+            ParentId = request.ParentId
+        };
+
         var result = await mediator.Send(command);
-        return result
-        .ToApiResult(
-            successMessage: "User created successfully",
-            successStatusCode: 200
+        return result.ToApiResult(
+            successMessage: "Category created successfully",
+            successStatusCode: 201
         );
     }
 

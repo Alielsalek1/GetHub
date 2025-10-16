@@ -16,6 +16,6 @@
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.7" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-    <ProjectReference Include="..\..\shared\SharedKernel\SharedKernel.csproj" />
+    <ProjectReference Include="..\..\shared\Shared.csproj" />
   </ItemGroup>
 </Project>

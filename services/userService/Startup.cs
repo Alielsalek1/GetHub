@@ -11,6 +11,7 @@ using userService.Models;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Serilog;
+using Shared.Extensions;
 
 namespace userService;
 
@@ -39,8 +40,10 @@ public class Startup(IConfiguration configuration)
         services.AddSingleton<IMongoClient>(sp =>
         {
             var settings = MongoClientSettings.FromConnectionString(connectionString);
-            settings.ServerSelectionTimeout = TimeSpan.FromSeconds(5);
-            settings.ConnectTimeout = TimeSpan.FromSeconds(5);
+            settings.ServerSelectionTimeout = TimeSpan.FromSeconds(30); // Increased timeout
+            settings.ConnectTimeout = TimeSpan.FromSeconds(30); // Increased timeout
+            settings.SocketTimeout = TimeSpan.FromSeconds(30);
+            settings.WaitQueueTimeout = TimeSpan.FromSeconds(30);
             return new MongoClient(settings);
         });
 
@@ -49,17 +52,6 @@ public class Startup(IConfiguration configuration)
             var client = sp.GetRequiredService<IMongoClient>();
             return client.GetDatabase(databaseName);
         });
-    }
-
-    /// <summary>
-    /// Configures Swagger/OpenAPI documentation services for the application.
-    /// Enables API documentation and testing interface in development environment.
-    /// </summary>
-    /// <param name="services">The service collection to add Swagger services to</param>
-    public void ConfigureSwagger(IServiceCollection services)
-    {
-        services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
     }
 
     /// <summary>
@@ -98,32 +90,37 @@ public class Startup(IConfiguration configuration)
     /// <returns>A task representing the asynchronous initialization operation</returns>
     public async Task InitializeMongoAsync(WebApplication app)
     {
-        try
+        const int maxRetries = 5;
+        const int delayBetweenRetries = 2000; // 2 seconds
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
-            using var scope = app.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
-            var users = db.GetCollection<User>("users");
-            
-            // Test connection with a short timeout
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await users.Database.RunCommandAsync<MongoDB.Bson.BsonDocument>(
-                new MongoDB.Bson.BsonDocument("ping", 1), cancellationToken: cts.Token);
-            
-            // Create index only if connection is successful
-            await users.Indexes.CreateOneAsync(new CreateIndexModel<User>(
-                Builders<User>.IndexKeys.Ascending(u => u.Email),
-                new CreateIndexOptions { Unique = true }), cancellationToken: cts.Token);
+            try
+            {
+                using var scope = app.Services.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
+                var users = db.GetCollection<User>("users");
                 
-            Console.WriteLine("✅ MongoDB connection established and indexes created successfully.");
-        }
-        catch (TimeoutException)
-        {
-            Console.WriteLine("⚠️ MongoDB connection timeout. Service will continue without database.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"⚠️ MongoDB initialization failed: {ex.Message}");
-            Console.WriteLine("Service will continue running without MongoDB connection.");
+                // Test connection with longer timeout
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                await users.Database.RunCommandAsync<MongoDB.Bson.BsonDocument>(
+                    new MongoDB.Bson.BsonDocument("ping", 1), cancellationToken: cts.Token);
+            
+                Console.WriteLine("✅ MongoDB connection established and indexes created successfully.");
+                return; // Success, exit the retry loop
+            }
+            catch (Exception ex) when (attempt < maxRetries)
+            {
+                Console.WriteLine($"⚠️ MongoDB connection attempt {attempt}/{maxRetries} failed: {ex.Message}");
+                Console.WriteLine($"Retrying in {delayBetweenRetries/1000} seconds...");
+                await Task.Delay(delayBetweenRetries);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ MongoDB initialization failed after {maxRetries} attempts: {ex.Message}");
+                Console.WriteLine("Service will continue running without MongoDB connection.");
+                break;
+            }
         }
     }
 }

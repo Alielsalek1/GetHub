@@ -4,7 +4,7 @@ namespace CatalogService.Application.Interfaces;
 
 public interface ICategoryRepository
 {
-    Task AddAsync(Category category);
+    Task<Category> AddAsync(Category category);
     Task<Category?> GetByIdAsync(int id);
     Task<Category?> GetByNameAsync(string name);
     Task<List<Category>> GetFirstLevelCategoriesAsync(int id);

@@ -6,14 +6,14 @@ WORKDIR /src
 # Copy only the files necessary for restore
 COPY ["GetHub.sln", "."]
 COPY ["services/userService/userService.csproj", "services/userService/"]
-COPY ["shared/SharedKernel/SharedKernel.csproj", "shared/SharedKernel/"]
+COPY ["services/shared/Shared.csproj", "services/shared/"]
 
 # Restore dependencies with optimizations
 RUN dotnet restore "services/userService/userService.csproj" --verbosity normal
 
 # Copy only required source files
 COPY services/userService/. ./services/userService/
-COPY shared/SharedKernel/. ./shared/SharedKernel/
+COPY services/shared/. ./services/shared/
 
 WORKDIR /src/services/userService
 

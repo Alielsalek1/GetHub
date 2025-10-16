@@ -6,6 +6,8 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using Microsoft.EntityFrameworkCore;
 using CatalogService.Infrastructure.Data;
 using System.Reflection;
+using CatalogService.Application.Interfaces;
+using CatalogService.Infrastructure.Repositories;
 
 namespace CatalogService.Presentation;
 
@@ -47,6 +49,10 @@ public class Startup(IConfiguration configuration)
             cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
             cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
         });
+
+        // Register repositories
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
     }
 
     /// <summary>

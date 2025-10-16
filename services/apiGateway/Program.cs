@@ -4,9 +4,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using ApiGateway.Middlewares;
-using SharedKernel.Services;
 using Serilog;
+using ApiGateway.Middlewares;
 
 // Configure Serilog from appSettings.Json
 var configuration = new ConfigurationBuilder()
@@ -33,6 +32,21 @@ try
         configuration.ReadFrom.Configuration(context.Configuration);
     });
 
+    // Add dedicated HttpClient for Keycloak communication to prevent socket exhaustion
+    builder.Services.AddHttpClient("KeycloakClient", client =>
+    {
+        var keycloakUrl = builder.Configuration["Keycloak:Url"] ?? throw new InvalidOperationException("Keycloak:Url not configured");
+        client.BaseAddress = new Uri(keycloakUrl);
+        client.Timeout = TimeSpan.FromSeconds(30);
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler()
+    {
+        // Configure connection pooling to prevent socket exhaustion
+        MaxConnectionsPerServer = 10,
+        UseDefaultCredentials = false
+    })
+    .SetHandlerLifetime(TimeSpan.FromMinutes(5)); // Rotate handlers every 5 minutes
+
     // Routing to services from the Reverse Proxy Configuration
     builder.Services
         .AddReverseProxy()
@@ -40,12 +54,11 @@ try
 
     var app = builder.Build();
 
-    // Custom middleware to manage JWT tokens before routing to services via YARP
-    app.UseJwtTransformation(builder.Configuration);
+    // Add Keycloak authentication middleware
+    app.UseMiddleware<KeycloakAuthenticationMiddleware>();
 
     // using YARP for Reverse Proxy Routing
     app.MapReverseProxy();
-
     app.Run();
 }
 catch (Exception ex)

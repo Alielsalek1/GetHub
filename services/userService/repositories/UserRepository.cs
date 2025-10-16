@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using MongoDB.Driver;
 using userService.interfaces;
 using userService.Models;
@@ -22,7 +20,9 @@ public class UserRepository(IMongoDatabase database) : IUserRepository
     /// found, otherwise null.</returns>
     public async Task<User> GetUserByIdAsync(Guid userId)
     {
-        return await _collection.Find(u => u.Id == userId).FirstOrDefaultAsync();
+        return await _collection
+            .Find(u => u.Id == userId)
+            .FirstOrDefaultAsync();
     }
 
     /// <summary>
@@ -50,14 +50,14 @@ public class UserRepository(IMongoDatabase database) : IUserRepository
     }
 
     /// <summary>
-    /// Retrieves a user by their email address.
+    /// Deletes a user by their ID.
     /// </summary>
-    /// <param name="email">The email address of the user to retrieve.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the user if
-    /// found, otherwise null.</returns>
-    public async Task<User> GetUserByEmailAsync(string email)
+    /// <param name="userId">The ID of the user to delete.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating
+    /// whether the user was deleted successfully.</returns>
+    public async Task<bool> DeleteUserAsync(Guid userId)
     {
-        return await _collection.Find(u => u.Email == email).FirstOrDefaultAsync();
+        var result = await _collection.DeleteOneAsync(u => u.Id == userId);
+        return result.DeletedCount > 0;
     }
-
 }

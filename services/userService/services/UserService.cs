@@ -2,8 +2,7 @@ using userService.DTOs;
 using userService.interfaces;
 using userService.Models;
 using FluentResults;
-using SharedKernel;
-using Amazon.Runtime;
+using Shared;
 
 namespace userService.services;
 
@@ -16,57 +15,45 @@ public class UserService(IUserRepository userRepository) : IUserService
     /// <summary>
     /// Creates a new user with the provided details after validation.
     /// </summary>
-    /// <param name="dto">The user creation request containing user details</param>
+    /// <param name="Dto">The user creation request containing user details</param>
     /// <returns>A result containing the created user information or error details</returns>
-    public async Task<Result<UserResponse>> CreateUserAsync(CreateUserRequest dto)
+    public async Task<Result<UserResponse>> CreateUserAsync(CreateUserRequest Dto, Guid UserId)
     {
-        // use correct DTO property names
         var user = new User
         {
-            Id = Guid.NewGuid(),
-            Username = dto.username,
-            Email = dto.email,
-            Bio = string.Empty,
-            ProfileImageUrl = null
+            Id = UserId,
+            PhoneNumber = Dto.phoneNumber,
+            Address = Dto.address,
         };
-
-        if (await userRepository.GetUserByEmailAsync(user.Email) != null)
-            return Result.Fail(new AlreadyExistsError("User with this email already exists."));
-            
+        
         if (await userRepository.GetUserByIdAsync(user.Id) != null)
-            return Result.Fail(new AlreadyExistsError("User with this ID already exists."));
+            return Result.Fail(new UserAlreadyExistsError());
 
         await userRepository.CreateUserAsync(user);
 
-        return Result.Ok(new UserResponse
-        {
-            id = user.Id,
-            name = user.Username,
-            email = user.Email,
-            bio = user.Bio,
-            profileImageUrl = user.ProfileImageUrl
-        });
+        return Result.Ok();
     }
 
     /// <summary>
     /// Retrieves a user by their unique identifier.
     /// </summary>
-    /// <param name="userId">The unique identifier of the user to retrieve</param>
+    /// <param name="UserId">The unique identifier of the user to retrieve</param>
     /// <returns>A result containing the user information if found, or error details if not found</returns>
-    public async Task<Result<UserResponse>> GetUserByIdAsync(Guid userId)
+    public async Task<Result<UserResponse>> GetUserByIdAsync(Guid UserId)
     {
-        var user = await userRepository.GetUserByIdAsync(userId);
+        var user = await userRepository.GetUserByIdAsync(UserId);
 
         if (user == null)
-            return Result.Fail(new NotFoundError("User not found."));
+            return Result.Fail(new UserNotFoundError());
 
         return Result.Ok(new UserResponse
         {
             id = user.Id,
-            name = user.Username,
-            email = user.Email,
+            phoneNumber = user.PhoneNumber,
+            address = user.Address,
             bio = user.Bio,
-            profileImageUrl = user.ProfileImageUrl
+            profileImageUrl = user.ProfileImageUrl,
+            bankAccountNumber = user.BankAccountNumber
         });
     }
 
@@ -74,37 +61,44 @@ public class UserService(IUserRepository userRepository) : IUserService
     /// Updates an existing user's information with the provided details.
     /// Only updates fields that are provided in the request (partial update).
     /// </summary>
-    /// <param name="id">The unique identifier of the user to update</param>
-    /// <param name="dto">The update request containing the fields to modify</param>
+    /// <param name="UserId">The unique identifier of the user to update</param>
+    /// <param name="Dto">The update request containing the fields to modify</param>
     /// <returns>A result containing the updated user information or error details</returns>
-    public async Task<Result<UserResponse>> UpdateUserAsync(Guid id, UpdateUserRequest dto)
+    public async Task<Result<UserResponse>> UpdateUserAsync(Guid UserId, UpdateUserRequest Dto)
     {
-        var user = await userRepository.GetUserByIdAsync(id);
+        var user = await userRepository.GetUserByIdAsync(UserId);
 
         if (user == null)
-            return Result.Fail(new NotFoundError("User not found."));
+            return Result.Fail(new UserNotFoundError());
 
-        if (dto.name != null) user.Username = dto.name;
-        if (dto.bio != null) user.Bio = dto.bio;
-        if (dto.profileImageUrl != null) user.ProfileImageUrl = dto.profileImageUrl;
-
-        await userRepository.UpdateUserAsync(user);
-        
-        return Result.Ok(new UserResponse
+        var newUser = new User
         {
-            id = user.Id,
-            name = user.Username,
-            bio = user.Bio,
-            profileImageUrl = user.ProfileImageUrl
-        });
+            Id = user.Id,
+            Bio = Dto.bio ?? user.Bio,
+            ProfileImageUrl = Dto.profileImageUrl ?? user.ProfileImageUrl,
+            PhoneNumber = Dto.phoneNumber ?? user.PhoneNumber,
+            Address = Dto.address ?? user.Address,
+            BankAccountNumber = Dto.bankAccountNumber ?? user.BankAccountNumber
+        };
+
+        await userRepository.UpdateUserAsync(newUser);
+
+        return Result.Ok();
     }
 
-    // public async Task<Result> DeleteUserAsync(Guid userId)
-    // {
-    //     var user = await _userRepository.GetUserByIdAsync(userId);
+    /// <summary>
+    /// Deletes a user by their unique identifier.
+    /// </summary>
+    /// <param name="userId">The unique identifier of the user to delete</param>
+    /// <returns>A result indicating the success or failure of the delete operation</returns>
+    public async Task<Result> DeleteUserAsync(Guid userId)
+    {
+        var user = await userRepository.GetUserByIdAsync(userId);
+        if (user == null)
+            return Result.Fail(new UserNotFoundError());
 
-    //     await _userRepository.DeleteUserAsync(user.Id);
+        await userRepository.DeleteUserAsync(userId);
 
-    //     return Result.Ok();
-    // }
+        return Result.Ok();
+    }
 }

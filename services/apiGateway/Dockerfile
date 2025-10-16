@@ -6,14 +6,14 @@ WORKDIR /src
 # Copy only the files necessary for restore
 COPY ["GetHub.sln", "."]
 COPY ["services/apiGateway/ApiGateway.csproj", "services/apiGateway/"]
-COPY ["shared/SharedKernel/SharedKernel.csproj", "shared/SharedKernel/"]
+COPY ["services/shared/Shared.csproj", "services/shared/"]
 
 # Restore dependencies with optimizations
 RUN dotnet restore "services/apiGateway/ApiGateway.csproj" --verbosity minimal
 
 # Copy only required source files
 COPY services/apiGateway/. ./services/apiGateway/
-COPY shared/SharedKernel/. ./shared/SharedKernel/
+COPY services/shared/. ./services/shared/
 
 WORKDIR /src/services/apiGateway
 

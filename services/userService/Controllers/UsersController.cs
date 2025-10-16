@@ -1,14 +1,17 @@
 using Microsoft.AspNetCore.Mvc;
-using SharedKernel;
-using SharedKernel.Extensions;
-using SharedKernel.Enums;
-using SharedKernel.Annotations;
+using Shared;
+using Shared.Extensions;
+using Shared.Enums;
+using Shared.Annotations;
 using userService.DTOs;
 using userService.interfaces;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using System;
 using Serilog;
+using MassTransit;
+using Shared.Utils;
+using FluentResults;
 
 namespace userService.Controllers;
 
@@ -18,7 +21,6 @@ namespace userService.Controllers;
 /// </summary>
 [ApiController]
 [Route("users")]
-[Authorize]
 public class UsersController(IUserService userService) : ControllerBase
 {
     private readonly Serilog.ILogger logger = Log.ForContext<UsersController>();
@@ -32,25 +34,25 @@ public class UsersController(IUserService userService) : ControllerBase
     /// <response code="200">User created successfully</response>
     /// <response code="400">Invalid input data or user creation failed</response>
     /// <response code="403">Unauthorized access - service authentication required</response>
-    [HttpPost]
-    [AuthorizeAuthType(AuthType.Service)]
-    public async Task<IResult> CreateUser([FromBody] CreateUserRequest request)
+    [HttpPost("{UserId:guid}")]
+    [AuthorizeAuthType(AuthType.Customer, AuthType.Admin)]
+    public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request, Guid UserId)
     {
-        logger.Information("Creating user with email: {Email}", request.email);
+        logger.Information("Creating user with Id: {Id}", UserId);
         
-        var result = await userService.CreateUserAsync(request);
-        
+        var result = await userService.CreateUserAsync(request, UserId);
+
         if (result.IsSuccess)
-            logger.Information("User created successfully with email: {Email}", request.email);
-        else
-            logger.Warning("User creation failed for email: {Email}. Errors: {Errors}", 
-                request.email, string.Join(", ", result.Errors.Select(e => e.Message)));
-        
-        return result
-            .ToApiResult(
-                successMessage: "User created successfully",
-                successStatusCode: 200
+        {
+            logger.Information("User created successfully with Id: {Id}", UserId);
+            return result.ToSuccessApiResult(
+                successStatusCode: 201
             );
+        }
+
+        logger.Warning("User creation failed for Id: {Id}. Errors: {Errors}",
+                UserId, string.Join(", ", result.Errors.Select(e => e.Message)));
+        return result.ToErrorApiResult();
     }
 
     /// <summary>
@@ -63,30 +65,26 @@ public class UsersController(IUserService userService) : ControllerBase
     /// <response code="404">User not found</response>
     /// <response code="401">Unauthorized - valid authentication required</response>
     [HttpGet("me")]
-    [AuthorizeAuthType(AuthType.UserOrService)]
-    public async Task<IResult> GetCurrentUser()
+    [AuthorizeAuthType(AuthType.Customer, AuthType.Admin)]
+    public async Task<IActionResult> GetCurrentUser()
     {
-        var userIdClaim = User.FindFirst("user_id")?.Value;
-        logger.Information("Getting current user with ID claim: {UserIdClaim}", userIdClaim);
-        
-        if (!Guid.TryParse(userIdClaim, out var userId))
-        {
-            logger.Warning("Invalid user ID claim: {UserIdClaim}", userIdClaim);
-            return Results.BadRequest(new ApiResponse("Invalid user ID", 400));
-        }
+        var userId = HeaderExtractor.GetUserId(Request.Headers);
+        if (userId == null || !Guid.TryParse(userId, out var userIdGuid))
+            return Result.Fail(new ValidationError()).ToErrorApiResult(["Invalid Request"]);
 
-        var result = await userService.GetUserByIdAsync(userId);
-        
+        var result = await userService.GetUserByIdAsync(userIdGuid);
+
         if (result.IsSuccess)
+        {
             logger.Information("Current user retrieved successfully: {UserId}", userId);
-        else
-            logger.Warning("Failed to retrieve current user: {UserId}. Errors: {Errors}", 
-                userId, string.Join(", ", result.Errors.Select(e => e.Message)));
-        
-        return result.ToApiResult(
-            successMessage: "User retrieved successfully",
-            successStatusCode: 200
-        );
+            return result.ToSuccessApiResult(
+                successStatusCode: 200,
+                successMessage: "User retrieved successfully"
+            );
+        }
+        logger.Warning("Failed to retrieve current user: {UserId}. Errors: {Errors}",
+            userId, string.Join(", ", result.Errors.Select(e => e.Message)));
+        return result.ToErrorApiResult();
     }
 
     /// <summary>
@@ -99,51 +97,57 @@ public class UsersController(IUserService userService) : ControllerBase
     /// <response code="404">User not found with the specified ID</response>
     /// <response code="403">Unauthorized access - service authentication required</response>
     /// <response code="400">Invalid user ID format</response>
-    [HttpGet("{id:guid}")]
-    [AuthorizeAuthType(AuthType.Service)]
-    public async Task<IResult> GetUserById(Guid id)
+    [HttpGet("{userId:guid}")]
+    [AuthorizeAuthType(AuthType.Admin)]
+    public async Task<IActionResult> GetUserById(Guid userId)
     {
-        logger.Information("Getting user by ID: {UserId}", id);
-        
-        var result = await userService.GetUserByIdAsync(id);
-        
+        logger.Information("Getting user by ID: {UserId}", userId);
+
+        var result = await userService.GetUserByIdAsync(userId);
+
         if (result.IsSuccess)
-            logger.Information("User retrieved successfully: {UserId}", id);
-        else
-            logger.Warning("Failed to retrieve user: {UserId}. Errors: {Errors}", 
-                id, string.Join(", ", result.Errors.Select(e => e.Message)));
-        
-        return result.ToApiResult(
-            successMessage: "User retrieved successfully",
-            successStatusCode: 200
-        );
+        {
+            logger.Information("User retrieved successfully: {UserId}", userId);
+            return result.ToSuccessApiResult(
+                successStatusCode: 200,
+                successMessage: "User retrieved successfully"
+            );
+        }
+        logger.Warning("Failed to retrieve user: {UserId}. Errors: {Errors}",
+            userId, string.Join(", ", result.Errors.Select(e => e.Message)));
+        return result.ToErrorApiResult();
     }
 
     /// <summary>
     /// Updates the current authenticated user's information.
     /// Extracts the user ID from JWT token claims and applies the provided updates.
     /// </summary>
-    /// <param name="updatedDto">DTO containing the updated user details</param>
+    /// <param name="updateUserDto">DTO containing the updated user details</param>
     /// <returns>A result indicating the success or failure of the update operation</returns>
     /// <response code="200">User information updated successfully</response>
     /// <response code="400">Invalid user ID in token or invalid update data</response>
     /// <response code="404">User not found</response>
     /// <response code="401">Unauthorized - user authentication required</response>
     [HttpPut("me")]
-    [AuthorizeAuthType(AuthType.User)]
-    public async Task<IResult> UpdateCurrentUser([FromBody] UpdateUserRequest updatedDto)
+    [AuthorizeAuthType(AuthType.Customer, AuthType.Admin)]
+    public async Task<IActionResult> UpdateCurrentUser([FromBody] UpdateUserRequest updateUserDto)
     {
-        // Extract user ID from JWT claims  
-        var userIdClaim = User.FindFirst("user_id")?.Value;
+        var userId = HeaderExtractor.GetUserId(Request.Headers);
+        if (userId == null || !Guid.TryParse(userId, out var userIdGuid))
+            return Result.Fail(new ValidationError()).ToErrorApiResult(["Invalid Request"]);
 
-        
-        if (!Guid.TryParse(userIdClaim, out var userId))
-            return Results.BadRequest(new ApiResponse("Invalid user ID in token", 400));
+        var result = await userService.UpdateUserAsync(userIdGuid, updateUserDto);
 
-        var result = await userService.UpdateUserAsync(userId, updatedDto);
-        return result.ToApiResult(
-            successMessage: "User updated successfully",
-            successStatusCode: 200
-        );
+        if (result.IsSuccess)
+        {
+            logger.Information("User updated successfully: {UserId}", userId);
+            return result.ToSuccessApiResult(
+                successStatusCode: 200,
+                successMessage: "User updated successfully"
+            );
+        }
+        logger.Warning("Failed to update user: {UserId}. Errors: {Errors}",
+            userId, string.Join(", ", result.Errors.Select(e => e.Message)));
+        return result.ToErrorApiResult();
     }
 }

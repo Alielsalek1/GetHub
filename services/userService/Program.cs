@@ -1,12 +1,11 @@
 using MongoDB.Driver;
 using userService.Models;
 using userService;
-using SharedKernel.Middleware;
 using Microsoft.AspNetCore.Builder;
-using SharedKernel.Extensions;
 using FluentValidation;
-using URLshortner.Dtos.Validators;
 using Serilog;
+using Shared.Extensions;
+using userService.Validators;
 
 // Configure Serilog from configuration
 var configuration = new ConfigurationBuilder()
@@ -25,21 +24,18 @@ try
     Log.Information("Starting UserService");
 
     var builder = WebApplication.CreateBuilder(args);
-    
+
     var startup = new Startup(builder.Configuration);
     startup.ConfigureSerilog(builder);
-
     builder.Services.AddControllers();
-    JwtAuthenticationExtensions.AddJwtAuthentication(builder.Services, builder.Configuration);
-    builder.Services.AddAuthorization();
-
     startup.ConfigureServices(builder.Services);
     startup.ConfigureMongoDB(builder.Services);
-    startup.ConfigureSwagger(builder.Services);
-
+    builder.Services.ConfigureSwagger();
     builder.Services.UseFluentValidationWithApiResponse();
     builder.Services.AddValidatorsFromAssemblyContaining<CreateUserRequestValidator>();
-    builder.Services.UseJsonValidator();
+    
+    // Add authorization services (required for IAuthorizationFilter to work)
+    builder.Services.AddAuthorization();
 
     var app = builder.Build();
 
@@ -49,18 +45,11 @@ try
         app.UseSwaggerUI();
     }
 
-    // input validation
     app.UseGlobalExceptionHandler();
-
-    app.UseHttpsRedirection();
+    // app.UseHttpsRedirection();
     app.UseRouting();
-
-    app.UseAuthentication();
-    app.UseAuthorization();
-
-    // application logic
+    app.UseAuthorization();   // Executes authorization filters like your AuthorizeAuthTypeAttribute
     app.MapControllers();
-
     await new Startup(builder.Configuration).InitializeMongoAsync(app);
 
     app.Run();

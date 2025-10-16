@@ -28,7 +28,6 @@ try
     startup.ConfigureSerilog(builder);
 
     builder.Services.AddControllers();
-    JwtAuthenticationExtensions.AddJwtAuthentication(builder.Services, builder.Configuration);
     builder.Services.AddAuthorization();
 
     startup.ConfigureServices(builder.Services);
@@ -47,11 +46,8 @@ try
 
     app.UseGlobalExceptionHandler();
 
-    app.UseHttpsRedirection();
+    // app.UseHttpsRedirection();
     app.UseRouting();
-
-    app.UseAuthentication();
-    app.UseAuthorization();
 
     // application logic
     app.MapControllers();

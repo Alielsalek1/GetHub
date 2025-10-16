@@ -9,10 +9,11 @@ namespace CatalogService.Infrastructure.Repositories;
 
 public class CategoryRepository(CatalogDbContext context) : ICategoryRepository
 {
-    public async Task AddAsync(Category category)
+    public async Task<Category> AddAsync(Category category)
     {
         await context.Categories.AddAsync(category);
         await context.SaveChangesAsync();
+        return category;
     }
 
     public async Task<Category?> GetByIdAsync(int id)

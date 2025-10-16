@@ -1,21 +1,39 @@
 using FluentValidation;
-using Microsoft.AspNetCore.Identity.Data;
-using URLshortner.Dtos;
-using URLshortner.Utils;
 using userService.DTOs;
+using Shared.Utils;
 
-namespace URLshortner.Dtos.Validators;
+namespace userService.Validators;
 
 /// <summary>
 /// Validator for UpdateUserRequest DTO.
 /// </summary>
 /// <remarks>
-/// This validator checks that the name field is not empty and meets the required format.
+/// This validator checks that optional fields meet the required format when provided.
+/// All fields are optional for updates, but must be valid if provided.
+/// Uses shared validators for consistency across microservices.
 /// </remarks>
 public class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
 {
     public UpdateUserRequestValidator()
     {
-        RuleFor(x => x.name).SetValidator(new UsernameValidator());
+        RuleFor(x => x.bankAccountNumber)
+            .SetValidator(new BankAccountValidator())
+            .When(x => x.bankAccountNumber != null);
+
+        RuleFor(x => x.bio)
+            .SetValidator(new BioValidator())
+            .When(x => x.bio != null);
+
+        RuleFor(x => x.phoneNumber)
+            .SetValidator(new PhoneNumberValidator())
+            .When(x => x.phoneNumber != null);
+
+        RuleFor(x => x.address)
+            .SetValidator(new AddressValidator())
+            .When(x => x.address != null);
+
+        RuleFor(x => x.profileImageUrl)
+            .SetValidator(new UrlValidator())
+            .When(x => x.profileImageUrl != null);
     }
 }

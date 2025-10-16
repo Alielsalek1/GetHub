@@ -1,11 +1,10 @@
-using CatalogService.Application.DTOs;
 using FluentResults;
 using MediatR;
 
-namespace CatalogService.Application.Commands;
+namespace CatalogService.Application.Features.Commands.CreateCategory;
 
-public record CreateCategoryCommand : IRequest<Result>
+public class CreateCategoryCommand : IRequest<Result>
 {
-    public string name { get; set; } = null!;
-    public int parentId { get; set; }
+    public string Name { get; set; } = null!;
+    public int? ParentId { get; set; }
 }
