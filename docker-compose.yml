@@ -78,6 +78,34 @@ services:
       - appnet
     restart: unless-stopped
 
+  catalogdb:
+    platform: linux/arm64
+    image: postgres:16-alpine
+    container_name: gethub-catalog-postgres
+    environment:
+      POSTGRES_DB: CatalogServiceDb
+      POSTGRES_USER: cataloguser
+      POSTGRES_PASSWORD: catalogpass123
+    ports:
+      - "5444:5432"
+    volumes:
+      - catalog_postgres_data:/var/lib/postgresql/data
+    networks:
+      - appnet
+    restart: unless-stopped
+
+  catalog-service:
+    build:
+      dockerfile: services/catalogService/Dockerfile
+    env_file:
+      - services/catalogService/.env
+    ports:
+      - "5083:5083"
+    depends_on:
+      - catalogdb
+    networks:
+      - appnet
+
   api-gateway:
     build:
       dockerfile: services/apiGateway/Dockerfile
@@ -89,6 +117,8 @@ services:
     depends_on:
       - rabbitmq
       - user-service
+      - keycloak
+      - catalog-service
     networks:
       - appnet
 
@@ -114,8 +144,8 @@ volumes:
     driver: local
   userdb_mongodb_config:
     driver: local
-  # catalog_postgres_data:
-  #   driver: local
+  catalog_postgres_data:
+    driver: local
   keycloak_postgres_data:
     driver: local
   keycloak_data:

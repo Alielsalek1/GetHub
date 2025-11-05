@@ -2,46 +2,46 @@ using FluentResults;
 using MediatR;
 using CatalogService.Application.Interfaces;
 using CatalogService.Domain.models;
-using SharedKernel;
+using Shared;
 
 namespace CatalogService.Application.Features.Commands.UpdateCategory;
 
-public class UpdateCategoryCommandHandler(ICategoryRepository categoryRepository) : IRequestHandler<UpdateCategoryCommand, Result>
+public class UpdateCategoryCommandHandler(ICategoryCommandRepository categoryCommandRepository, ICategoryQueryRepository categoryQueryRepository) : IRequestHandler<UpdateCategoryCommand, Result>
 {
     public async Task<Result> Handle(UpdateCategoryCommand request, CancellationToken cancellationToken)
     {
-        var category = await categoryRepository.GetByIdAsync(request.Id);
+        var category = await categoryQueryRepository.GetByIdAsync(request.Id);
         
         if (category == null)
         {
-            return Result.Fail(new NotFoundError($"Category with ID {request.Id} not found"));
+            return Result.Fail(new CategoryNotFoundError());
         }
 
         // Check for name conflicts if changing name
         if (!string.IsNullOrWhiteSpace(request.Name) && request.Name != category.Name)
         {
-            var existingCategory = await categoryRepository.GetByNameAsync(request.Name);
+            var existingCategory = await categoryQueryRepository.GetByNameAsync(request.Name);
             if (existingCategory != null && existingCategory.Id != request.Id)
             {
-                return Result.Fail(new AlreadyExistsError($"Category with name '{request.Name}' already exists"));
+                return Result.Fail(new CategoryWithSameNameAlreadyExistsError());
             }
         }
 
         // Validate parent category exists if changing parent
         if (request.ParentId.HasValue && request.ParentId != category.ParentId)
         {
-            var parentCategory = await categoryRepository.GetByIdAsync(request.ParentId.Value);
+            var parentCategory = await categoryQueryRepository.GetByIdAsync(request.ParentId.Value);
             if (parentCategory == null)
-                return Result.Fail(new NotFoundError($"Parent category with ID {request.ParentId} not found"));
+                return Result.Fail(new ParentCategoryNotFoundError());
 
             // Prevent circular reference (category cannot be its own parent)
             if (request.ParentId == request.Id)
-                return Result.Fail(new ValidationError("Category cannot be its own parent"));
+                return Result.Fail(new CategoryCircularDependencyUpdateError());
 
             // Check for circular reference in the hierarchy
-            var ancestors = await categoryRepository.GetCategoryWithAncestorsAsync(request.ParentId.Value);
+            var ancestors = await categoryQueryRepository.GetCategoryWithAncestorsAsync(request.ParentId.Value);
             if (ancestors.Any(a => a.Id == request.Id))
-                return Result.Fail(new ValidationError("Cannot create circular reference in category hierarchy"));
+                return Result.Fail(new CategoryCircularDependencyUpdateError());
         }
 
         // Create updated category entity
@@ -52,7 +52,7 @@ public class UpdateCategoryCommandHandler(ICategoryRepository categoryRepository
             ParentId = request.ParentId ?? category.ParentId
         };
 
-        await categoryRepository.UpdateAsync(updatedCategory);
+        await categoryCommandRepository.UpdateAsync(updatedCategory);
 
         return Result.Ok();
     }

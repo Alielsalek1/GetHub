@@ -17,7 +17,7 @@ public class UserService(IUserRepository userRepository) : IUserService
     /// </summary>
     /// <param name="Dto">The user creation request containing user details</param>
     /// <returns>A result containing the created user information or error details</returns>
-    public async Task<Result<UserResponse>> CreateUserAsync(CreateUserRequest Dto, Guid UserId)
+    public async Task<Result> CreateUserAsync(CreateUserRequest Dto, Guid UserId)
     {
         var user = new User
         {
@@ -64,7 +64,7 @@ public class UserService(IUserRepository userRepository) : IUserService
     /// <param name="UserId">The unique identifier of the user to update</param>
     /// <param name="Dto">The update request containing the fields to modify</param>
     /// <returns>A result containing the updated user information or error details</returns>
-    public async Task<Result<UserResponse>> UpdateUserAsync(Guid UserId, UpdateUserRequest Dto)
+    public async Task<Result> UpdateUserAsync(Guid UserId, UpdateUserRequest Dto)
     {
         var user = await userRepository.GetUserByIdAsync(UserId);
 

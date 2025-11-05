@@ -24,8 +24,8 @@ try
     Log.Information("Starting UserService");
 
     var builder = WebApplication.CreateBuilder(args);
-
     var startup = new Startup(builder.Configuration);
+    
     startup.ConfigureSerilog(builder);
     builder.Services.AddControllers();
     startup.ConfigureServices(builder.Services);
@@ -34,7 +34,6 @@ try
     builder.Services.UseFluentValidationWithApiResponse();
     builder.Services.AddValidatorsFromAssemblyContaining<CreateUserRequestValidator>();
     
-    // Add authorization services (required for IAuthorizationFilter to work)
     builder.Services.AddAuthorization();
 
     var app = builder.Build();

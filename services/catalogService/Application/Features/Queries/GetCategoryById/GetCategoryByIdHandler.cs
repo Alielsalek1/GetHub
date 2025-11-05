@@ -4,11 +4,11 @@ using CatalogService.Application.Queries;
 using CatalogService.Domain.models;
 using FluentResults;
 using MediatR;
-using SharedKernel;
+using Shared;
 
 namespace CatalogService.Application.Features.Queries.GetCategoryById;
 
-public class GetCategoryByIdHandler(ICategoryRepository categoryRepository) 
+public class GetCategoryByIdHandler(ICategoryQueryRepository categoryRepository) 
 : IRequestHandler<GetCategoryByIdQuery, Result<CategoryResponse>>
 {
     public async Task<Result<CategoryResponse>> Handle(GetCategoryByIdQuery request, CancellationToken cancellationToken)
@@ -16,7 +16,7 @@ public class GetCategoryByIdHandler(ICategoryRepository categoryRepository)
         var category = await categoryRepository.GetByIdAsync(request.Id);
         
         if (category == null)
-            return Result.Fail(new NotFoundError($"Category with ID {request.Id} not found"));
+            return Result.Fail(new CategoryNotFoundError());
 
         return Result.Ok(new CategoryResponse
         {

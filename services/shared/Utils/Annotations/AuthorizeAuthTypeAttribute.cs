@@ -40,7 +40,7 @@ public class AuthorizeAuthTypeAttribute(params AuthType[] authTypes) : Attribute
         // Determine the actual auth type from the header
         var actualAuthType = authTypeHeader.ToLowerInvariant() switch
         {
-            "admin" => AuthType.Admin,
+            "manager" => AuthType.Manager,
             "customer" => AuthType.Customer,
             _ => AuthType.Anonymous // Default to Anonymous for unknown types
         };

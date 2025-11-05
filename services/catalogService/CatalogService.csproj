@@ -13,7 +13,7 @@
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="8.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-    <ProjectReference Include="..\..\shared\Shared.csproj" />
+  <ProjectReference Include="..\shared\Shared.csproj" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <PackageReference Include="MediatR" Version="12.4.0" />
   </ItemGroup>

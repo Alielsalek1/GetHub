@@ -5,14 +5,14 @@ WORKDIR /src
 # Copy solution and project files
 COPY ["GetHub.sln", "."]
 COPY ["services/catalogService/CatalogService.csproj", "services/catalogService/"]
-COPY ["shared/SharedKernel/SharedKernel.csproj", "shared/SharedKernel/"]
+COPY ["services/shared/Shared.csproj", "services/shared/"]
 
 # Restore dependencies
 RUN dotnet restore "services/catalogService/CatalogService.csproj"
 
 # Copy source code
 COPY services/catalogService/. ./services/catalogService/
-COPY shared/SharedKernel/. ./shared/SharedKernel/
+COPY services/shared/. ./services/shared/
 
 WORKDIR /src/services/catalogService
 

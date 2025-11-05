@@ -3,11 +3,11 @@ using CatalogService.Application.Interfaces;
 using CatalogService.Application.Queries;
 using FluentResults;
 using MediatR;
-using SharedKernel;
+using Shared;
 
 namespace CatalogService.Application.Features.Queries.GetBaseCategories;
 
-public class GetBaseCategoriesHandler(ICategoryRepository categoryRepository) 
+public class GetBaseCategoriesHandler(ICategoryQueryRepository categoryRepository) 
     : IRequestHandler<GetBaseCategoriesQuery, Result<List<CategoryResponse>>>
 {
     public async Task<Result<List<CategoryResponse>>> Handle(GetBaseCategoriesQuery request, CancellationToken cancellationToken)
@@ -15,7 +15,7 @@ public class GetBaseCategoriesHandler(ICategoryRepository categoryRepository)
         var baseCategories = await categoryRepository.GetBaseCategoriesAsync();
 
         if (baseCategories == null || baseCategories.Count == 0)
-            return Result.Fail(new NotFoundError("No base categories found"));
+            return Result.Ok(new List<CategoryResponse>());
 
         var response = baseCategories.Select(c => new CategoryResponse
         {

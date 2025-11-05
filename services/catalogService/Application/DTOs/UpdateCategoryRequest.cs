@@ -2,6 +2,6 @@ namespace CatalogService.Application.DTOs;
 
 public class UpdateCategoryRequest
 {
-    public string? Name { get; set; }
-    public int? ParentId { get; set; }
+    public string? name { get; set; }
+    public int? parentId { get; set; }
 }

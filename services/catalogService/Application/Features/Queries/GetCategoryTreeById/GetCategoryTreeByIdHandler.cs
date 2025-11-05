@@ -3,11 +3,11 @@ using CatalogService.Application.Interfaces;
 using CatalogService.Application.Queries;
 using FluentResults;
 using MediatR;
-using SharedKernel;
+using Shared;
 
 namespace CatalogService.Application.Features.Queries.GetCategoryTreeById;
 
-public class GetCategoryTreeByIdHandler(ICategoryRepository categoryRepository) 
+public class GetCategoryTreeByIdHandler(ICategoryQueryRepository categoryRepository) 
     : IRequestHandler<GetCategoryTreeByIdQuery, Result<CategoryTreeResponse>>
 {
     public async Task<Result<CategoryTreeResponse>> Handle(GetCategoryTreeByIdQuery request, CancellationToken cancellationToken)
@@ -15,7 +15,7 @@ public class GetCategoryTreeByIdHandler(ICategoryRepository categoryRepository)
         var categoriesWithAncestors = await categoryRepository.GetCategoryWithAncestorsAsync(request.Id);
 
         if (categoriesWithAncestors.Count == 0)
-            return Result.Fail(new NotFoundError($"Category with ID {request.Id} not found"));
+            return Result.Fail(new CategoryNotFoundError());
 
         var targetCategory = categoriesWithAncestors.First();
         

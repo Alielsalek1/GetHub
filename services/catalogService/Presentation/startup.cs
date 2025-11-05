@@ -6,8 +6,10 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using Microsoft.EntityFrameworkCore;
 using CatalogService.Infrastructure.Data;
 using System.Reflection;
+using FluentValidation;
 using CatalogService.Application.Interfaces;
 using CatalogService.Infrastructure.Repositories;
+using CatalogService.Domain.models;
 
 namespace CatalogService.Presentation;
 
@@ -51,8 +53,13 @@ public class Startup(IConfiguration configuration)
         });
 
         // Register repositories
-        services.AddScoped<ICategoryRepository, CategoryRepository>();
-        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<ICategoryCommandRepository, CategoryCommandRepository>();
+        services.AddScoped<ICategoryQueryRepository, CategoryQueryRepository>();
+        services.AddScoped<IProductCommandRepository, ProductCommandRepository>();
+        services.AddScoped<IProductQueryRepository, ProductQueryRepository>();
+
+        // Register FluentValidation validators from this assembly
+        services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
     }
 
     /// <summary>
@@ -70,5 +77,4 @@ public class Startup(IConfiguration configuration)
             configuration.ReadFrom.Configuration(context.Configuration);
         });
     }
-
 }

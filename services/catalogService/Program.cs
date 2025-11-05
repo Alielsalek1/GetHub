@@ -1,10 +1,12 @@
-using SharedKernel.Middleware;
+using Shared.Middleware;
 using Microsoft.AspNetCore.Builder;
-using SharedKernel.Extensions;
+using Shared.Extensions;
 using FluentValidation;
 using Serilog;
 
 using CatalogService.Presentation;
+using CatalogService.Application.Features.Commands.CreateCategory;
+using CatalogService.Application.Validators;
 
 // Configure Serilog from configuration
 var configuration = new ConfigurationBuilder()
@@ -23,18 +25,16 @@ try
     Log.Information("Starting CatalogService");
 
     var builder = WebApplication.CreateBuilder(args);
-    
     var startup = new Startup(builder.Configuration);
-    startup.ConfigureSerilog(builder);
 
+    startup.ConfigureSerilog(builder);
     builder.Services.AddControllers();
     builder.Services.AddAuthorization();
-
     startup.ConfigureServices(builder.Services);
-    startup.ConfigureSwagger(builder.Services);
-
+    startup.ConfigureSwagger(builder.Services); 
     builder.Services.UseFluentValidationWithApiResponse();
-    builder.Services.UseJsonValidator();
+    builder.Services.AddAuthorization();
+    builder.Services.AddValidatorsFromAssemblyContaining<CreateCategoryRequestValidator>();
 
     var app = builder.Build();
 
@@ -44,12 +44,11 @@ try
         app.UseSwaggerUI();
     }
 
-    app.UseGlobalExceptionHandler();
+    // app.UseGlobalExceptionHandler();
 
     // app.UseHttpsRedirection();
     app.UseRouting();
-
-    // application logic
+    app.UseAuthorization();
     app.MapControllers();
 
     app.Run();

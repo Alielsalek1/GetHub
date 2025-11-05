@@ -2,34 +2,34 @@ using CatalogService.Application.Interfaces;
 using CatalogService.Domain.models;
 using FluentResults;
 using MediatR;
-using SharedKernel;
+using Shared;
 
 namespace CatalogService.Application.Features.Commands.UpdateProduct;
 
-public class UpdateProductCommandHandler(IProductRepository productRepository, ICategoryRepository categoryRepository) 
+public class UpdateProductCommandHandler(IProductQueryRepository productQueryRepository, IProductCommandRepository productCommandRepository, ICategoryQueryRepository categoryQueryRepository) 
     : IRequestHandler<UpdateProductCommand, Result>
 {
     public async Task<Result> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
-        var product = await productRepository.GetByIdAsync(request.Id);
+        var product = await productQueryRepository.GetByIdAsync(request.Id);
         
         if (product == null)
-            return Result.Fail(new NotFoundError($"Product with ID {request.Id} not found"));
+            return Result.Fail(new ProductNotFoundError());
 
         // Validate category exists if changing category
         if (request.CategoryId.HasValue && request.CategoryId != product.CategoryId)
         {
-            var categoryExists = await categoryRepository.GetByIdAsync(request.CategoryId.Value);
+            var categoryExists = await categoryQueryRepository.GetByIdAsync(request.CategoryId.Value);
             if (categoryExists == null)
-                return Result.Fail(new NotFoundError($"Category with ID {request.CategoryId} not found"));
+                return Result.Fail(new CategoryNotFoundError());
         }
 
         // Check for name conflicts if changing name
         if (!string.IsNullOrWhiteSpace(request.Name) && request.Name != product.Name)
         {
-            var existingProduct = await productRepository.GetByNameAsync(request.Name);
+            var existingProduct = await productQueryRepository.GetByNameAsync(request.Name);
             if (existingProduct != null && existingProduct.Id != request.Id)
-                return Result.Fail(new AlreadyExistsError($"Product with name '{request.Name}' already exists"));
+                return Result.Fail(new ProductAlreadyExistsError());
         }
 
         // Create updated product entity
@@ -42,7 +42,7 @@ public class UpdateProductCommandHandler(IProductRepository productRepository, I
             CategoryId = request.CategoryId ?? product.CategoryId
         };
 
-        await productRepository.UpdateAsync(updatedProduct);
+    await productCommandRepository.UpdateAsync(updatedProduct);
 
         return Result.Ok();
     }

@@ -3,28 +3,28 @@ using CatalogService.Application.Interfaces;
 using CatalogService.Domain.models;
 using FluentResults;
 using MediatR;
-using SharedKernel;
+using Shared;
 
 namespace CatalogService.Application.Features.Commands.CreateCategory;
 
-public class CreateCategoryHandler(ICategoryRepository categoryRepository) : IRequestHandler<CreateCategoryCommand, Result>
+public class CreateCategoryHandler(ICategoryCommandRepository categoryCommandRepository, ICategoryQueryRepository categoryQueryRepository) : IRequestHandler<CreateCategoryCommand, Result>
 {
     public async Task<Result> Handle(CreateCategoryCommand request, CancellationToken cancellationToken)
     {
         // Check if category with same name already exists
-        var existingCategory = await categoryRepository.GetByNameAsync(request.Name);
+        var existingCategory = await categoryQueryRepository.GetByNameAsync(request.Name);
         if (existingCategory != null)
         {
-            return Result.Fail(new AlreadyExistsError($"Category with name '{request.Name}' already exists"));
+            return Result.Fail(new CategoryAlreadyExistsError());
         }
 
         // Validate parent category exists if ParentId is provided
         if (request.ParentId.HasValue)
         {
-            var parentCategory = await categoryRepository.GetByIdAsync(request.ParentId.Value);
+            var parentCategory = await categoryQueryRepository.GetByIdAsync(request.ParentId.Value);
             if (parentCategory == null)
             {
-                return Result.Fail(new NotFoundError($"Parent category with ID {request.ParentId} not found"));
+                return Result.Fail(new ParentCategoryNotFoundError());
             }
         }
 
@@ -34,7 +34,7 @@ public class CreateCategoryHandler(ICategoryRepository categoryRepository) : IRe
             ParentId = request.ParentId
         };
 
-        await categoryRepository.AddAsync(category);
+    await categoryCommandRepository.AddAsync(category);
 
         return Result.Ok();
     }

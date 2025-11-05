@@ -2,18 +2,18 @@ using CatalogService.Application.DTOs;
 using CatalogService.Application.Interfaces;
 using FluentResults;
 using MediatR;
-using SharedKernel;
+using Shared;
 
 namespace CatalogService.Application.Features.Queries.GetProductById;
 
-public class GetProductByIdHandler(IProductRepository productRepository) : IRequestHandler<GetProductByIdQuery, Result<ProductResponse>>
+public class GetProductByIdHandler(IProductQueryRepository productRepository) : IRequestHandler<GetProductByIdQuery, Result<ProductResponse>>
 {
     public async Task<Result<ProductResponse>> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
         var product = await productRepository.GetByIdAsync(request.Id);
 
         if (product == null)
-            return Result.Fail(new NotFoundError($"Product with ID {request.Id} not found"));
+            return Result.Fail(new ProductNotFoundError());
 
         var response = new ProductResponse
         {

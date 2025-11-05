@@ -89,6 +89,10 @@ public static class ResultExtensions
         string? message
     )
     {
+        // return an empty status result rather than an ApiResponse wrapper.
+        if (statusCode == StatusCodes.Status201Created || statusCode == StatusCodes.Status204NoContent)
+            return new StatusCodeResult(statusCode);
+
         var response = new ApiResponse
         {
             message = message ?? "Operation successful",

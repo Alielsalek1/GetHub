@@ -3,6 +3,6 @@ namespace Shared.Enums;
 public enum AuthType
 {
     Anonymous,
-    Admin,
+    Manager,
     Customer
 }

@@ -42,12 +42,6 @@ public class KeycloakAuthenticationMiddleware(
 
             var introspectUrl = $"/realms/{realm}/protocol/openid-connect/token/introspect";
 
-            logger.LogInformation("Introspecting token with Keycloak at {IntrospectUrl}", introspectUrl);
-            logger.LogInformation("Client ID: {ClientId}", clientId);
-            logger.LogInformation("Client Secret: {ClientSecret}", clientSecret); // Avoid logging sensitive info
-            logger.LogInformation("Token: {Token}", token);
-            logger.LogInformation("Realm: {Realm}", realm);
-
             var formData = new FormUrlEncodedContent(
             [
                 new KeyValuePair<string, string>("token", token),
@@ -55,14 +49,7 @@ public class KeycloakAuthenticationMiddleware(
                 new KeyValuePair<string, string>("client_secret", clientSecret)
             ]);
 
-            // Log the exact request details
-            logger.LogInformation("========== REQUEST DETAILS ==========");
-            logger.LogInformation("Full URL: {Url}", $"{httpClient.BaseAddress}{introspectUrl}");
-            logger.LogInformation("Content-Type: {ContentType}", formData.Headers.ContentType?.ToString());
             var formContent = await formData.ReadAsStringAsync();
-            logger.LogInformation("Form Data: {FormData}", formContent);
-            logger.LogInformation("Token length: {TokenLength} characters", token.Length);
-            logger.LogInformation("=====================================");
 
             // Recreate formData since we consumed it for logging
             formData = new FormUrlEncodedContent(
@@ -138,12 +125,12 @@ public class KeycloakAuthenticationMiddleware(
             return "anonymous";
 
         // Check for admin role first (higher priority)
-        if (roles.Contains("admin", StringComparer.OrdinalIgnoreCase))
-            return "admin";
+        if (roles.Contains("Manager", StringComparer.OrdinalIgnoreCase))
+            return "Manager";
 
         // Check for customer role
-        if (roles.Contains("customer", StringComparer.OrdinalIgnoreCase))
-            return "customer";
+        if (roles.Contains("Customer", StringComparer.OrdinalIgnoreCase))
+            return "Customer";
 
         // Default to user if no specific role found
         return "anonymous";

@@ -45,8 +45,8 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
                 .IsRequired()
                 .HasMaxLength(100);
 
-            entity.HasIndex(e => e.Name)
-                .IsUnique();
+            // index on parentId
+            entity.HasIndex(e => e.ParentId);
 
             // Self-referencing relationship for parent/child categories
             entity.HasOne(e => e.ParentCategory)

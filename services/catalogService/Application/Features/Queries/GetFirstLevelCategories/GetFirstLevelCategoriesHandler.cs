@@ -3,11 +3,11 @@ using CatalogService.Application.Interfaces;
 using CatalogService.Application.Queries;
 using FluentResults;
 using MediatR;
-using SharedKernel;
+using Shared;
 
 namespace CatalogService.Application.Features.Queries.GetFirstLevelCategories;
 
-public class GetFirstLevelCategoriesHandler(ICategoryRepository categoryRepository) :
+public class GetFirstLevelCategoriesHandler(ICategoryQueryRepository categoryRepository) :
     IRequestHandler<GetFirstLevelCategoriesQuery, Result<List<CategoryResponse>>>
 {
     public async Task<Result<List<CategoryResponse>>> Handle(GetFirstLevelCategoriesQuery request, CancellationToken cancellationToken)
@@ -15,7 +15,7 @@ public class GetFirstLevelCategoriesHandler(ICategoryRepository categoryReposito
         var ParentCategory = await categoryRepository.GetByIdAsync(request.Id);
 
         if (ParentCategory is null)
-            return Result.Fail(new NotFoundError($"Parent category with ID {request.Id} not found"));
+            return Result.Fail(new CategoryNotFoundError());
 
         var FirstLevelCategories = await categoryRepository.GetFirstLevelCategoriesAsync(request.Id);
 

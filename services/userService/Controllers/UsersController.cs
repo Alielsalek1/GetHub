@@ -20,7 +20,7 @@ namespace userService.Controllers;
 /// Provides endpoints for user management with proper authorization and logging.
 /// </summary>
 [ApiController]
-[Route("users")]
+[Route("api/user")]
 public class UsersController(IUserService userService) : ControllerBase
 {
     private readonly Serilog.ILogger logger = Log.ForContext<UsersController>();
@@ -35,7 +35,7 @@ public class UsersController(IUserService userService) : ControllerBase
     /// <response code="400">Invalid input data or user creation failed</response>
     /// <response code="403">Unauthorized access - service authentication required</response>
     [HttpPost("{UserId:guid}")]
-    [AuthorizeAuthType(AuthType.Customer, AuthType.Admin)]
+    [AuthorizeAuthType(AuthType.Customer, AuthType.Manager)]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request, Guid UserId)
     {
         logger.Information("Creating user with Id: {Id}", UserId);
@@ -65,7 +65,7 @@ public class UsersController(IUserService userService) : ControllerBase
     /// <response code="404">User not found</response>
     /// <response code="401">Unauthorized - valid authentication required</response>
     [HttpGet("me")]
-    [AuthorizeAuthType(AuthType.Customer, AuthType.Admin)]
+    [AuthorizeAuthType(AuthType.Customer, AuthType.Manager)]
     public async Task<IActionResult> GetCurrentUser()
     {
         var userId = HeaderExtractor.GetUserId(Request.Headers);
@@ -98,7 +98,7 @@ public class UsersController(IUserService userService) : ControllerBase
     /// <response code="403">Unauthorized access - service authentication required</response>
     /// <response code="400">Invalid user ID format</response>
     [HttpGet("{userId:guid}")]
-    [AuthorizeAuthType(AuthType.Admin)]
+    [AuthorizeAuthType(AuthType.Manager)]
     public async Task<IActionResult> GetUserById(Guid userId)
     {
         logger.Information("Getting user by ID: {UserId}", userId);
@@ -129,7 +129,7 @@ public class UsersController(IUserService userService) : ControllerBase
     /// <response code="404">User not found</response>
     /// <response code="401">Unauthorized - user authentication required</response>
     [HttpPut("me")]
-    [AuthorizeAuthType(AuthType.Customer, AuthType.Admin)]
+    [AuthorizeAuthType(AuthType.Customer, AuthType.Manager)]
     public async Task<IActionResult> UpdateCurrentUser([FromBody] UpdateUserRequest updateUserDto)
     {
         var userId = HeaderExtractor.GetUserId(Request.Headers);

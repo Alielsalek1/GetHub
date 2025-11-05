@@ -5,7 +5,7 @@ using MediatR;
 
 namespace CatalogService.Application.Features.Queries.GetProductsByBrand;
 
-public class GetProductsByBrandHandler(IProductRepository productRepository) : IRequestHandler<GetProductsByBrandQuery, Result<List<ProductResponse>>>
+public class GetProductsByBrandHandler(IProductQueryRepository productRepository) : IRequestHandler<GetProductsByBrandQuery, Result<List<ProductResponse>>>
 {
     public async Task<Result<List<ProductResponse>>> Handle(GetProductsByBrandQuery request, CancellationToken cancellationToken)
     {

@@ -4,18 +4,12 @@ using CatalogService.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Dapper;
 using System.Data;
+using System.Linq;
 
 namespace CatalogService.Infrastructure.Repositories;
 
-public class CategoryRepository(CatalogDbContext context) : ICategoryRepository
+public class CategoryQueryRepository(CatalogDbContext context) : ICategoryQueryRepository
 {
-    public async Task<Category> AddAsync(Category category)
-    {
-        await context.Categories.AddAsync(category);
-        await context.SaveChangesAsync();
-        return category;
-    }
-
     public async Task<Category?> GetByIdAsync(int id)
     {
         return await context.Categories.FindAsync(id);
@@ -24,12 +18,6 @@ public class CategoryRepository(CatalogDbContext context) : ICategoryRepository
     public async Task<Category?> GetByNameAsync(string name)
     {
         return await context.Categories.FirstOrDefaultAsync(u => u.Name == name);
-    }
-
-    public async Task UpdateAsync(Category category)
-    {
-        context.Categories.Update(category);
-        await context.SaveChangesAsync();
     }
 
     public async Task<List<Category>> GetBaseCategoriesAsync()
@@ -50,14 +38,12 @@ public class CategoryRepository(CatalogDbContext context) : ICategoryRepository
     {
         var sql = @"
             WITH RECURSIVE CategoryHierarchy AS (
-                -- Base case: Start with the specified category
                 SELECT ""Id"", ""Name"", ""ParentId"", 0 as Level
                 FROM ""Categories"" 
                 WHERE ""Id"" = @CategoryId
                 
                 UNION ALL
                 
-                -- Recursive case: Get parent categories
                 SELECT c.""Id"", c.""Name"", c.""ParentId"", ch.Level + 1
                 FROM ""Categories"" c
                 INNER JOIN CategoryHierarchy ch ON c.""Id"" = ch.""ParentId""
@@ -67,6 +53,11 @@ public class CategoryRepository(CatalogDbContext context) : ICategoryRepository
 
         using var connection = context.Database.GetDbConnection();
         var categories = await connection.QueryAsync<Category>(sql, new { CategoryId = id });
-        return [.. categories];
+        return categories.ToList();
+    }
+
+    public async Task<bool> HasChildCategoriesAsync(int id)
+    {
+        return await context.Categories.AnyAsync(c => c.ParentId == id);
     }
 }
