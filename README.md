@@ -199,5 +199,3 @@ Each service provides REST API endpoints for their specific domain operations.
 - **System Metrics**: CPU, memory, and disk usage
 
 ---
-
-**GetHub** - Building the future of e-commerce with modern microservices architecture!
